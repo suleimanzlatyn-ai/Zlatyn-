@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1712">
+<title>Qur’an — Recite & Learn</title>
+<style>
+:root{--bg:#0b120e;--panel:#121d16;--gold:#d7b66a;--text:#f5f0df;--muted:#9eaa9f;--green:#79c98b;--red:#ef7777;--line:#28372c}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#263c2b 0,#0b120e 42%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+header{position:sticky;top:0;z-index:5;background:rgba(11,18,14,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;letter-spacing:.3px}.brand small{display:block;color:var(--gold);font-weight:500;font-size:11px;margin-top:2px}
+button{border:1px solid var(--line);background:#17251b;color:var(--text);border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}button:active{transform:scale(.98)}button.primary{background:var(--gold);color:#15150f;border-color:var(--gold)}
+main{max-width:850px;margin:auto;padding:24px 16px 50px}.hero{text-align:center;padding:20px 0 12px}.surah{font-family:serif;font-size:38px;color:var(--gold);margin:0}.subtitle{color:var(--muted);margin:6px 0 0}
+.mushaf{margin:18px auto;background:#f4eedb;color:#211f19;border-radius:18px;padding:28px 20px 32px;box-shadow:0 18px 55px #0007;max-width:720px;border:7px solid #caa968}
+.bismillah{text-align:center;font-family:"Amiri",serif;font-size:28px;margin-bottom:22px}
+.ayah{font-family:serif;font-size:31px;line-height:2.35;text-align:center;direction:rtl;word-spacing:5px}
+.word{display:inline-block;padding:0 4px;border-radius:7px;transition:.18s}.word.current{background:#e5d19a}.word.correct{color:#26753b}.word.error{background:#ffd0d0;color:#a51e1e;text-decoration:underline 2px}.word.dim{opacity:.45}
+.ayahno{font-family:system-ui;font-size:14px;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid #9c8d68;border-radius:50%;vertical-align:middle;margin:0 5px}
+.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0}.status{margin:0 auto 16px;max-width:720px;padding:13px 15px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--muted);text-align:center}.status strong{color:var(--text)}
+.notice{max-width:720px;margin:14px auto;padding:13px;border-radius:14px;background:#171e18;border:1px solid #344136;color:#b9c4ba;font-size:13px;line-height:1.55}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:22px}.feature{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px}.feature b{display:block;margin-bottom:5px}.feature span{font-size:12px;color:var(--muted)}
+@media(max-width:600px){.ayah{font-size:25px;line-height:2.3}.mushaf{padding:23px 12px}.features{grid-template-columns:1fr}.surah{font-size:32px}}
+</style>
+</head>
+<body>
+<header><div class="brand">Qur’an <small>Free • No ads • No subscription</small></div><button id="reset">Reset</button></header>
+<main>
+<section class="hero"><h1 class="surah">سُورَةُ الْفَاتِحَةِ</h1><p class="subtitle">Al-Fātiḥah • Recitation practice</p></section>
+<div class="status" id="status">Press <strong>Start Recitation</strong>, allow microphone access, then read aloud.</div>
+<section class="mushaf" aria-label="Quran page">
+<div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
+<div class="ayah" id="ayah"></div>
+</section>
+<div class="controls">
+<button class="primary" id="start">🎙 Start Recitation</button>
+<button id="stop" disabled>⏹ Stop</button>
+<button id="listen">🔊 Read Correctly</button>
+</div>
+<div class="notice"><strong>Accuracy note:</strong> This first MVP uses the device's speech-recognition engine and word matching. It is a practice aid, not a qualified Qur’an/Tajweed teacher. A later version can add a dedicated Arabic recitation model and deeper Tajweed analysis.</div>
+<div class="features">
+<div class="feature"><b>📖 Mushaf reading</b><span>Clean, distraction-free Qur’an reading view.</span></div>
+<div class="feature"><b>🎙 Live tracking</b><span>Words are followed as your speech is recognized.</span></div>
+<div class="feature"><b>🔴 Mistake flags</b><span>Skipped or mismatched words are marked for practice.</span></div>
+</div>
+</main>
+<script>
+const verses=[
+["الْحَمْدُ","لِلَّهِ","رَبِّ","الْعَالَمِينَ"],
+["الرَّحْمَٰنِ","الرَّحِيمِ"],
+["مَالِكِ","يَوْمِ","الدِّينِ"],
+["إِيَّاكَ","نَعْبُدُ","وَإِيَّاكَ","نَسْتَعِينُ"],
+["اهْدِنَا","الصِّرَاطَ","الْمُسْتَقِيمَ"],
+["صِرَاطَ","الَّذِينَ","أَنْعَمْتَ","عَلَيْهِمْ","غَيْرِ","الْمَغْضُوبِ","عَلَيْهِمْ","وَلَا","الضَّالِّينَ"]
+];
+const flat=verses.flat();
+const ayah=document.getElementById("ayah"),status=document.getElementById("status"),start=document.getElementById("start"),stop=document.getElementById("stop");
+flat.forEach((w,i)=>{const s=document.createElement("span");s.className="word dim";s.dataset.i=i;s.textContent=w;ayah.appendChild(s);if([3,5,8,12,15,23].includes(i)){const n=document.createElement("span");n.className="ayahno";n.textContent=[1,2,3,4,5,6][[3,5,8,12,15,23].indexOf(i)];ayah.appendChild(n)}});
+
+function norm(s){return s.normalize("NFKD").replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ؤ/g,"و").replace(/ئ/g,"ي").replace(/ة/g,"ه").replace(/ـ/g,"").replace(/[^\u0600-\u06FF\s]/g,"").trim();}
+function wordsFromTranscript(t){return norm(t).split(/\s+/).filter(Boolean)}
+let recognition=null, running=false, cursor=0;
+function markProgress(recWords){
+ const target=flat.map(norm), got=recWords.map(norm);
+ let best=cursor;
+ for(let i=cursor;i<Math.min(target.length,cursor+8);i++){if(got.length && (target[i]===got[got.length-1] || target[i].includes(got[got.length-1]) || got[got.length-1].includes(target[i]))){best=i+1}}
+ const spans=[...document.querySelectorAll(".word")];
+ spans.forEach((s,i)=>{s.classList.remove("current","correct","error","dim");if(i<best)s.classList.add("correct");else if(i===best)s.classList.add("current");else s.classList.add("dim")});
+ cursor=Math.max(cursor,best);
+ if(cursor>=flat.length){status.innerHTML="🎉 <strong>Recitation reached the end.</strong> Review any words you want to repeat.";stopRec();}}
+function startRec(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){status.innerHTML="Your browser does not expose live speech recognition. Try Chrome on Android or use the app's native version.";return}
+ recognition=new SR();recognition.lang="ar-SA";recognition.continuous=true;recognition.interimResults=true;recognition.maxAlternatives=3;
+ recognition.onstart=()=>{running=true;start.disabled=true;stop.disabled=false;status.innerHTML="🎙 <strong>Listening…</strong> Read the Arabic aloud.";};
+ recognition.onresult=e=>{let text="";for(let i=0;i<e.results.length;i++)text+=e.results[i][0].transcript+" ";markProgress(wordsFromTranscript(text));};
+ recognition.onerror=e=>{status.innerHTML="Microphone/recognition issue: <strong>"+e.error+"</strong>. You can try again.";};
+ recognition.onend=()=>{if(running){try{recognition.start()}catch(_){}}};
+ try{recognition.start()}catch(_){}
+}
+function stopRec(){running=false;if(recognition)try{recognition.stop()}catch(_){}start.disabled=false;stop.disabled=true;status.innerHTML="Recitation paused. Press <strong>Start Recitation</strong> to continue."}
+start.onclick=startRec;stop.onclick=stopRec;
+document.getElementById("reset").onclick=()=>{stopRec();cursor=0;document.querySelectorAll(".word").forEach(s=>{s.className="word dim"});status.innerHTML="Press <strong>Start Recitation</strong>, allow microphone access, then read aloud."};
+document.getElementById("listen").onclick=()=>{const u=new SpeechSynthesisUtterance("Alhamdu lillahi rabbil alameen");u.lang="ar-SA";speechSynthesis.speak(u)};
+</script>
+</body>
+</html>
