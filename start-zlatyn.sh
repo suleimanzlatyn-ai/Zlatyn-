@@ -2,4 +2,4 @@
 set -e
 cd "$(dirname "$0")"
 python3 -m pip install -r requirements.txt
-python3 worker.py
+python3 worker/worker.py
