@@ -83,5 +83,19 @@ start.onclick=startRec;stop.onclick=stopRec;
 document.getElementById("reset").onclick=()=>{stopRec();cursor=0;document.querySelectorAll(".word").forEach(s=>{s.className="word dim"});status.innerHTML="Press <strong>Start Recitation</strong>, allow microphone access, then read aloud."};
 document.getElementById("listen").onclick=()=>{const u=new SpeechSynthesisUtterance("Alhamdu lillahi rabbil alameen");u.lang="ar-SA";speechSynthesis.speak(u)};
 </script>
-</body>
+<style>
+.qpicker{display:flex;gap:8px;align-items:center;justify-content:center;margin:10px auto 4px;max-width:720px}
+.qpicker select{background:#17251b;color:#f5f0df;border:1px solid #34473a;border-radius:10px;padding:10px 12px;max-width:100%}
+</style>
+<script>
+(()=>{const names=['Al-Fatihah','Al-Baqarah','Aal-E-Imran','An-Nisa','Al-Maidah','Al-Anam','Al-Araf','Al-Anfal','At-Tawbah','Yunus','Hud','Yusuf','Ar-Rad','Ibrahim','Al-Hijr','An-Nahl','Al-Isra','Al-Kahf','Maryam','Ta-Ha','Al-Anbiya','Al-Hajj','Al-Muminun','An-Nur','Al-Furqan','Ash-Shuara','An-Naml','Al-Qasas','Al-Ankabut','Ar-Rum','Luqman','As-Sajdah','Al-Ahzab','Saba','Fatir','Ya-Sin','As-Saffat','Sad','Az-Zumar','Ghafir','Fussilat','Ash-Shura','Az-Zukhruf','Ad-Dukhan','Al-Jathiyah','Al-Ahqaf','Muhammad','Al-Fath','Al-Hujurat','Qaf','Adh-Dhariyat','At-Tur','An-Najm','Al-Qamar','Ar-Rahman','Al-Waqiah','Al-Hadid','Al-Mujadila','Al-Hashr','Al-Mumtahanah','As-Saff','Al-Jumua','Al-Munafiqun','At-Taghabun','At-Talaq','At-Tahrim','Al-Mulk','Al-Qalam','Al-Haqqah','Al-Maarij','Nuh','Al-Jinn','Al-Muzzammil','Al-Muddaththir','Al-Qiyamah','Al-Insan','Al-Mursalat','An-Naba','An-Naziat','Abasa','At-Takwir','Al-Infitar','Al-Mutaffifin','Al-Inshiqaq','Al-Buruj','At-Tariq','Al-Ala','Al-Ghashiyah','Al-Fajr','Al-Balad','Ash-Shams','Al-Lail','Ad-Duha','Ash-Sharh','At-Tin','Al-Alaq','Al-Qadr','Al-Bayyinah','Az-Zalzalah','Al-Adiyat','Al-Qariah','At-Takathur','Al-Asr','Al-Humazah','Al-Fil','Quraysh','Al-Maun','Al-Kawthar','Al-Kafirun','An-Nasr','Al-Masad','Al-Ikhlas','Al-Falaq','An-Nas'];
+const top=document.querySelector('header'), pick=document.createElement('div');pick.className='qpicker';pick.innerHTML='<select id="qSurah" aria-label="Choose surah"></select>';top.insertAdjacentElement('afterend',pick);
+const sel=pick.firstElementChild;names.forEach((n,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=(i+1)+'. '+n;sel.appendChild(o)});
+const mushaf=document.querySelector('.mushaf'), title=document.querySelector('.surah'), subtitle=document.querySelector('.subtitle'), status=document.querySelector('.status');
+let active=1, data=[];
+function clean(s){return s.normalize('NFKD').replace(/[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ـ/g,'').trim()}
+async function load(n){status.textContent='Loading Surah '+n+'…';const r=await fetch('https://cdn.jsdelivr.net/npm/quran-json@3.1.2/dist/chapters/'+n+'.json');if(!r.ok)throw Error('load');const d=await r.json();data=d.verses||d.ayahs||[];title.textContent='سُورَةُ '+(d.name||names[n-1]);subtitle.textContent=names[n-1]+' • '+data.length+' ayahs • Uthmani Arabic';const a=document.querySelector('#ayah');a.innerHTML='';data.forEach(v=>{v.text.split(/\\s+/).forEach(w=>{const s=document.createElement('span');s.className='word';s.dataset.w=w;s.textContent=w+' ';a.appendChild(s)});const q=document.createElement('span');q.className='ayahno';q.textContent=v.verse||v.number||'';a.appendChild(q)});status.innerHTML='Press <strong>Start Recitation</strong> and read aloud.';active=n}
+sel.onchange=()=>load(+sel.value).catch(()=>status.textContent='Could not load this surah. Check your connection.');
+load(1).catch(()=>{});
+})();</script></body>
 </html>
