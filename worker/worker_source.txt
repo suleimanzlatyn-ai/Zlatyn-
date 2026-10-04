@@ -235,6 +235,38 @@ def process_job(job, url, max_clips):
         shutil.rmtree(work, ignore_errors=True)
 
 
+def process_uploaded_job(job, source, max_clips):
+    work = os.path.join(TMP, job)
+    os.makedirs(work, exist_ok=True)
+    try:
+        if not installed("ffmpeg"): raise RuntimeError("FFmpeg is not installed")
+        set_job(job, state="audio", progress=18, message="Preparing audio")
+        audio = os.path.join(work, "audio.wav")
+        p = run_cmd("ffmpeg", "-y", "-i", source, "-vn", "-ac", "1", "-ar", "16000", audio, timeout=600)
+        if p.returncode: raise RuntimeError(p.stderr[-1800:])
+        set_job(job, state="transcribing", progress=28, message="Transcribing locally")
+        segs = transcribe(audio)
+        if not segs: raise RuntimeError("No speech was detected")
+        set_job(job, state="ranking", progress=52, message="Ranking hooks and removing repeats")
+        picked = pick_candidates(make_candidates(segs), max_clips)
+        if not picked: raise RuntimeError("No strong clip candidates were found")
+        results=[]; total=len(picked)
+        for idx,c in enumerate(picked,1):
+            out=os.path.join(OUT,f"{job}-{idx:02d}.mp4")
+            try: render(source,c,out)
+            except Exception: continue
+            results.append({"title":c["text"][:180],"score":c["score"],"duration":round(c["duration"],2),"reason":"hook + pacing + uniqueness","download":"/output/"+os.path.basename(out)})
+            set_job(job,progress=55+int(42*idx/max(1,total)),message=f"Rendering clip {idx} of {total}")
+        if not results: raise RuntimeError("FFmpeg could not render any selected clips")
+        set_job(job,state="done",progress=100,message="Finished",clips=results)
+    except Exception as exc:
+        set_job(job,state="error",progress=100,message=str(exc),error=str(exc))
+    finally:
+        try: os.remove(source)
+        except OSError: pass
+        shutil.rmtree(work,ignore_errors=True)
+
+
 class Handler(BaseHTTPRequestHandler):
     def send_headers(self, typ="application/json"):
         self.send_header("Content-Type", typ)
@@ -278,6 +310,27 @@ class Handler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
+        if self.path == "/process-upload":
+            try:
+                length=int(self.headers.get("Content-Length","0"))
+                if length <= 0: raise ValueError("No video was uploaded")
+                if length > 8 * 1024 * 1024 * 1024: raise ValueError("Video is larger than the 8 GB local limit")
+                job=uuid.uuid4().hex[:10]; name=os.path.basename(self.headers.get("X-Filename","upload.mp4"))
+                ext=os.path.splitext(name)[1].lower()
+                if ext not in (".mp4",".mov",".webm",".mkv",".m4v"): ext=".mp4"
+                path=os.path.join(TMP,job+ext); os.makedirs(TMP,exist_ok=True)
+                set_job(job,state="uploading",progress=5,message="Receiving video locally",clips=[])
+                remaining=length
+                with open(path,"wb") as f:
+                    while remaining:
+                        chunk=self.rfile.read(min(1024*1024,remaining))
+                        if not chunk: break
+                        f.write(chunk); remaining-=len(chunk)
+                if remaining: raise ValueError("Upload ended before the full video was received")
+                threading.Thread(target=process_uploaded_job,args=(job,path,30),daemon=True).start()
+                self.send_response(202); self.send_headers(); self.wfile.write(json.dumps({"job":job}).encode()); return
+            except Exception as exc:
+                self.send_response(400); self.send_headers(); self.wfile.write(json.dumps({"error":str(exc)}).encode()); return
         if self.path != "/process": self.send_error(404); return
         try:
             n = int(self.headers.get("Content-Length", "0"))
